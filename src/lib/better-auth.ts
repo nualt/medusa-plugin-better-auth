@@ -2,10 +2,11 @@ import { Pool } from "pg"
 import { configManager } from "@medusajs/framework/config"
 import { resolvePluginOptions } from "./options"
 import type { ResolvedPluginOptions } from "./types"
+import type { betterAuth } from "better-auth" with { "resolution-mode": "import" }
 
 export const BASE_PATH = "/better-auth"
 
-export type BetterAuthInstance = any
+export type BetterAuthInstance = ReturnType<typeof betterAuth>
 
 export async function buildBetterAuth(
   resolved: ResolvedPluginOptions
@@ -16,6 +17,9 @@ export async function buildBetterAuth(
     ? user.trustedOrigins
     : []
 
+  // Cast needed: betterAuth<{specific}> returns Auth<{specific}> which is
+  // structurally incompatible with Auth<BetterAuthOptions> at the generic
+  // type level even though specific extends BetterAuthOptions.
   return betterAuth({
     ...user,
     database: new Pool({ connectionString: resolved.databaseUrl }),
@@ -25,11 +29,13 @@ export async function buildBetterAuth(
     session: { modelName: "ba_session", ...user.session },
     account: { modelName: "ba_account", ...user.account },
     verification: { modelName: "ba_verification", ...user.verification },
-  })
+  }) as unknown as BetterAuthInstance
 }
 
 let resolvedOptions: ResolvedPluginOptions | null = null
-let instance: BetterAuthInstance | null = null
+// Stores the in-flight/resolved promise to prevent concurrent first-callers
+// from racing past the null check and creating duplicate pg Pools.
+let instancePromise: Promise<BetterAuthInstance> | null = null
 
 /**
  * Options singleton — reads the Medusa config module loaded for this
@@ -43,16 +49,15 @@ export function getPluginOptions(): ResolvedPluginOptions {
   return resolvedOptions
 }
 
-export async function getBetterAuth(): Promise<BetterAuthInstance> {
-  if (!instance) {
-    instance = await buildBetterAuth(getPluginOptions())
+export function getBetterAuth(): Promise<BetterAuthInstance> {
+  if (!instancePromise) {
+    instancePromise = buildBetterAuth(getPluginOptions())
   }
-  return instance
+  return instancePromise
 }
 
 export async function runBetterAuthMigrations(): Promise<void> {
-  // @ts-ignore - Dynamic import path, resolves at runtime
-  const { getMigrations } = await import("better-auth/dist/db/get-migration.mjs")
+  const { getMigrations } = await import("better-auth/db/migration")
   const auth = await getBetterAuth()
   const { runMigrations } = await getMigrations(auth.options)
   await runMigrations()
