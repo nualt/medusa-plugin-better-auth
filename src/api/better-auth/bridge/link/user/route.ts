@@ -1,3 +1,8 @@
+// NOTE: `autoLink` deliberately does NOT apply here.
+// Admin linking is always explicit: the caller must be an already-invited
+// admin user whose email was verified by the provider. There is no
+// "auto-link on verified-email" path for admins — this is the sole entry
+// point and it always requires both invariants to hold.
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { MedusaError, Modules } from "@medusajs/framework/utils"
 import { ensureLinkedIdentity, getSessionUser } from "../helpers"

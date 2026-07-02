@@ -1,7 +1,3 @@
-import React from "react"
-
-export const BetterAuthAdmin = () => {
-  return <div>Better Auth Plugin Admin</div>
-}
-
+// Widgets are auto-discovered by Medusa from src/admin/widgets/ — no
+// explicit registration required here.
 export default []

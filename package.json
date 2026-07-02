@@ -27,7 +27,8 @@
   "scripts": {
     "build": "medusa plugin:build",
     "dev": "medusa plugin:develop",
-    "test:unit": "jest"
+    "test:unit": "jest",
+    "prepublishOnly": "medusa plugin:build"
   },
   "dependencies": {
     "cors": "^2.8.5",

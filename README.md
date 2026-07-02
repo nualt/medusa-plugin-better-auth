@@ -113,7 +113,10 @@ Sign in with any Better Auth flow, then exchange the session:
 The storefront and backend must share a registrable domain (e.g.
 `shop.example.com` / `api.example.com`) so the browser sends the Better
 Auth session cookie cross-origin. Exchange calls must run in the browser
-(`credentials: "include"`), not from a server runtime.
+(`credentials: "include"`), not from a server runtime. The storefront
+origin must also be included in Medusa's `AUTH_CORS` env var because the
+core exchange routes (`/auth/customer/better-auth`, `/auth/token/refresh`)
+live under `/auth/*` and are gated by that policy.
 
 See a complete implementation in
 [nualt-shop](https://github.com/thomassarazin/nualt-shop)
@@ -131,11 +134,14 @@ existing invited admin user.
 | Option | Default | Description |
 | --- | --- | --- |
 | `betterAuth` | — (required) | Passthrough Better Auth config. `database` and `basePath` are managed by the plugin; core table names default to `ba_user`, `ba_session`, `ba_account`, `ba_verification`. |
-| `autoLink` | `"verified-email"` | Link identities to existing same-email actors automatically, or `"never"`. |
+| `autoLink` | `"verified-email"` | Controls automatic identity linking for **customers** only: `"verified-email"` links when the provider verified the email; `"never"` never links automatically. Admin linking is always explicit — an invited admin user must exist and the provider must have verified the email; `autoLink` has no effect on the `link/user` route. |
 | `autoMigrate` | `NODE_ENV !== "production"` | Run Better Auth schema migrations at boot. |
 
 Secret resolution: `betterAuth.secret`, else `BETTER_AUTH_SECRET`. The
-server refuses to boot without one. Trusted origins are derived from your
+server refuses to boot without one. Caveat: in setups where the config
+module isn't loaded at plugin import time (some pnpm monorepos), the
+failure surfaces as a logged startup error and 500s on `/better-auth/*`
+instead of a hard boot refusal. Trusted origins are derived from your
 Medusa `authCors`/`storeCors`/`adminCors` and merged with any
 `betterAuth.trustedOrigins` you provide.
 
