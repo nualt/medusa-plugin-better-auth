@@ -6,6 +6,7 @@ import type {
   Logger,
 } from "@medusajs/framework/types"
 import { getBetterAuth } from "../../lib/better-auth"
+import { nodeHeadersToFetch } from "../../lib/node-headers"
 
 type InjectedDependencies = {
   logger: Logger
@@ -14,26 +15,6 @@ type InjectedDependencies = {
 const LINK_HINT =
   "This Better Auth identity is not linked to an admin account. " +
   "Complete the linking step first (POST /better-auth/bridge/link/user)."
-
-/**
- * Convert a plain headers object (IncomingHttpHeaders-style) into a WHATWG
- * Headers instance without importing fromNodeHeaders from better-auth/node
- * (which is ESM-only and breaks the CJS build of the plugin).
- */
-function nodeHeadersToFetch(
-  raw: Record<string, string | string[] | undefined>
-): Headers {
-  const headers = new Headers()
-  for (const [key, value] of Object.entries(raw)) {
-    if (value === undefined) continue
-    if (Array.isArray(value)) {
-      headers.set(key, value.join(", "))
-    } else {
-      headers.set(key, value)
-    }
-  }
-  return headers
-}
 
 export class BetterAuthProviderService extends AbstractAuthModuleProvider {
   static identifier = "better-auth"
