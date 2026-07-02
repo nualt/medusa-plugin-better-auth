@@ -4,6 +4,7 @@ import {
   pickActorByEmail,
   type BridgeSessionUser,
 } from "../helpers"
+import { MedusaError } from "@medusajs/framework/utils"
 import type { PostgresAdvisoryLockConnection } from "../../../../../lib/postgres-advisory-lock"
 
 const baUser: BridgeSessionUser = {
@@ -129,11 +130,15 @@ describe("pickActorByEmail", () => {
   const jane = { id: "1", email: "jane@test.dev" }
   const janeUpper = { id: "2", email: "Jane@test.dev" }
 
-  it("prefers the exact-case match when several actors differ only by case", () => {
-    expect(pickActorByEmail([janeUpper, jane], "jane@test.dev")).toBe(jane)
+  it("rejects ambiguous accounts that differ only by email casing", () => {
+    expect(() =>
+      pickActorByEmail([janeUpper, jane], "jane@test.dev")
+    ).toThrow(
+      expect.objectContaining({ type: MedusaError.Types.CONFLICT })
+    )
   })
 
-  it("falls back to the first case-insensitive match", () => {
+  it("returns the single case-insensitive match", () => {
     expect(pickActorByEmail([janeUpper], "jane@test.dev")).toBe(janeUpper)
   })
 

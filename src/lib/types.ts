@@ -27,6 +27,12 @@ export interface BetterAuthPluginOptions {
    * Run Better Auth schema migrations at boot.
    */
   autoMigrate?: boolean
+  /**
+   * Normalize new Medusa customer and cart emails to lowercase, and resolve
+   * native email/password logins case-insensitively. Disable only when the
+   * store intentionally treats the email local-part as case-sensitive.
+   */
+  normalizeCustomerEmails?: boolean
 }
 
 /**
@@ -36,6 +42,7 @@ export interface ResolvedPluginOptions {
   betterAuth: BetterAuthPluginOptions["betterAuth"]
   autoLink: AutoLinkPolicy
   autoMigrate: boolean
+  normalizeCustomerEmails: boolean
   databaseUrl: string
   trustedOrigins: string[]
 }

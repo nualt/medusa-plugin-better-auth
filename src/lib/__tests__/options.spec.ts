@@ -58,13 +58,27 @@ describe("resolvePluginOptions", () => {
     ])
   })
 
-  it("applies defaults: autoLink verified-email, autoMigrate outside production", () => {
+  it("applies customer linking, migration, and email normalization defaults", () => {
     process.env.BETTER_AUTH_SECRET = "s"
     const resolved = resolvePluginOptions(
       baseConfig([pluginEntry({ betterAuth: {} })])
     )
     expect(resolved.autoLink).toEqual("verified-email")
     expect(resolved.autoMigrate).toBe(true)
+    expect(resolved.normalizeCustomerEmails).toBe(true)
+  })
+
+  it("allows customer email normalization to be disabled explicitly", () => {
+    process.env.BETTER_AUTH_SECRET = "s"
+    const resolved = resolvePluginOptions(
+      baseConfig([
+        pluginEntry({
+          betterAuth: {},
+          normalizeCustomerEmails: false,
+        }),
+      ])
+    )
+    expect(resolved.normalizeCustomerEmails).toBe(false)
   })
 
   it("matches a plugin entry resolved by local path", () => {

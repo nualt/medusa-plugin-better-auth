@@ -14,6 +14,12 @@ import {
   type BetterAuthInstance,
 } from "../lib/better-auth"
 import { withFullRequestUrl } from "../lib/node-request-url"
+import {
+  normalizeCartEmail,
+  normalizeCustomerCreationEmail,
+  normalizeCustomerEmailPassLogin,
+  normalizeCustomerEmailPassRegistration,
+} from "./customer-email"
 
 const BRIDGE_PREFIX = `${BASE_PATH}/bridge`
 
@@ -148,8 +154,46 @@ async function betterAuthRouter(
   }
 }
 
+async function waitForPluginReady(
+  _req: MedusaRequest,
+  _res: MedusaResponse,
+  next: MedusaNextFunction
+) {
+  try {
+    await ready
+    return next()
+  } catch (error) {
+    return next(error)
+  }
+}
+
 export default defineMiddlewares({
   routes: [
+    {
+      matcher: "/auth/customer/emailpass/register",
+      methods: ["POST"],
+      middlewares: [waitForPluginReady, normalizeCustomerEmailPassRegistration],
+    },
+    {
+      matcher: "/auth/customer/emailpass",
+      methods: ["POST"],
+      middlewares: [waitForPluginReady, normalizeCustomerEmailPassLogin],
+    },
+    {
+      matcher: "/store/customers",
+      methods: ["POST"],
+      middlewares: [waitForPluginReady, normalizeCustomerCreationEmail],
+    },
+    {
+      matcher: "/store/carts",
+      methods: ["POST"],
+      middlewares: [waitForPluginReady, normalizeCartEmail],
+    },
+    {
+      matcher: "/store/carts/:id",
+      methods: ["POST"],
+      middlewares: [waitForPluginReady, normalizeCartEmail],
+    },
     {
       matcher: `${BASE_PATH}/*`,
       // Indispensable : toNodeHandler lit le stream brut. Un body déjà

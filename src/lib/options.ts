@@ -57,6 +57,7 @@ export function resolvePluginOptions(config: ConfigModule): ResolvedPluginOption
     betterAuth: { ...options.betterAuth, secret },
     autoLink: options.autoLink ?? "verified-email",
     autoMigrate: options.autoMigrate ?? process.env.NODE_ENV !== "production",
+    normalizeCustomerEmails: options.normalizeCustomerEmails ?? true,
     databaseUrl,
     trustedOrigins,
   }

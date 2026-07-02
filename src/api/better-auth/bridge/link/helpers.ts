@@ -2,6 +2,7 @@ import type { MedusaRequest } from "@medusajs/framework/http"
 import type { IAuthModuleService } from "@medusajs/framework/types"
 import { MedusaError } from "@medusajs/framework/utils"
 import { getBetterAuth } from "../../../../lib/better-auth"
+import { caseInsensitiveEmailFilter } from "../../../../lib/customer-email"
 import { nodeHeadersToFetch } from "../../../../lib/node-headers"
 import {
   PostgresAdvisoryLockConnection,
@@ -27,20 +28,25 @@ export type BridgeSessionUser = {
  * filtres Medusa déclarent `email: string`, mais le DAL accepte les
  * opérateurs MikroORM — d'où le cast côté appelant.
  */
-export function caseInsensitiveEmailFilter(email: string): { $ilike: string } {
-  return { $ilike: email.replace(/[\\%_]/g, "\\$&") }
-}
+export { caseInsensitiveEmailFilter }
 
 /**
- * Choisit l'acteur à lier parmi les correspondances insensibles à la
- * casse : priorité à la casse exacte si plusieurs comptes ne diffèrent
- * que par la casse de l'email.
+ * Choisit l'unique acteur correspondant à l'email sans tenir compte de la
+ * casse. Plusieurs résultats indiquent une base ambiguë : ne jamais choisir
+ * arbitrairement un compte, surtout pour une identité admin.
  */
 export function pickActorByEmail<T extends { email: string }>(
   actors: T[],
-  email: string
+  _email: string
 ): T | undefined {
-  return actors.find((actor) => actor.email === email) ?? actors[0]
+  if (actors.length > 1) {
+    throw new MedusaError(
+      MedusaError.Types.CONFLICT,
+      "Multiple Medusa accounts match this verified email. Resolve duplicate email casing before linking."
+    )
+  }
+
+  return actors[0]
 }
 
 export async function getSessionUser(
