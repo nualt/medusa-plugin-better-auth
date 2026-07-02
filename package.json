@@ -21,6 +21,7 @@
   "exports": {
     "./package.json": "./package.json",
     "./providers/*": "./.medusa/server/src/providers/*/index.js",
+    "./ui/*": "./.medusa/server/src/ui/*.js",
     "./*": "./.medusa/server/src/*.js",
     "./admin": {
       "import": "./.medusa/server/src/admin/index.mjs",
