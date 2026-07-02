@@ -1,4 +1,7 @@
-import { AbstractAuthModuleProvider } from "@medusajs/framework/utils"
+import {
+  AbstractAuthModuleProvider,
+  MedusaError,
+} from "@medusajs/framework/utils"
 import type {
   AuthenticationInput,
   AuthenticationResponse,
@@ -15,6 +18,15 @@ type InjectedDependencies = {
 const LINK_HINT =
   "This Better Auth identity is not linked to an admin account. " +
   "Complete the linking step first (POST /better-auth/bridge/link/user)."
+
+function isIdentityNotFoundError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    MedusaError.isMedusaError(error) &&
+    error.type === MedusaError.Types.NOT_FOUND
+  )
+}
 
 export class BetterAuthProviderService extends AbstractAuthModuleProvider {
   static identifier = "better-auth"
@@ -57,7 +69,11 @@ export class BetterAuthProviderService extends AbstractAuthModuleProvider {
       authIdentity = await authIdentityProviderService.retrieve({
         entity_id: entityId,
       })
-    } catch {
+    } catch (error) {
+      if (!isIdentityNotFoundError(error)) {
+        throw error
+      }
+
       // Identity unknown to Medusa.
       if (data.actor_type === "user") {
         // Invariant: never auto-create admin side — linking to an existing

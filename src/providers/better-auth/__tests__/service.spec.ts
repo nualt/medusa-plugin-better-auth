@@ -1,4 +1,5 @@
 import { BetterAuthProviderService } from "../service"
+import { MedusaError } from "@medusajs/framework/utils"
 
 jest.mock("../../../lib/better-auth", () => ({
   getBetterAuth: jest.fn(),
@@ -65,7 +66,9 @@ describe("BetterAuthProviderService.authenticate", () => {
   it("creates the identity for a first-time customer", async () => {
     withSession(baSession())
     const service = identityService()
-    service.retrieve.mockRejectedValue(new Error("not found"))
+    service.retrieve.mockRejectedValue(
+      new MedusaError(MedusaError.Types.NOT_FOUND, "not found")
+    )
     const created = { id: "authid_2", app_metadata: {} }
     service.create.mockResolvedValue(created)
     const result = await makeService().authenticate(
@@ -84,10 +87,30 @@ describe("BetterAuthProviderService.authenticate", () => {
     })
   })
 
+  it("surfaces identity provider failures instead of creating an identity", async () => {
+    withSession(baSession())
+    const service = identityService()
+    const providerError = new MedusaError(
+      MedusaError.Types.DB_ERROR,
+      "database unavailable"
+    )
+    service.retrieve.mockRejectedValue(providerError)
+
+    await expect(
+      makeService().authenticate(
+        { actor_type: "customer", headers: {} },
+        service as any
+      )
+    ).rejects.toBe(providerError)
+    expect(service.create).not.toHaveBeenCalled()
+  })
+
   it("never creates an identity for the user (admin) actor", async () => {
     withSession(baSession())
     const service = identityService()
-    service.retrieve.mockRejectedValue(new Error("not found"))
+    service.retrieve.mockRejectedValue(
+      new MedusaError(MedusaError.Types.NOT_FOUND, "not found")
+    )
     const result = await makeService().authenticate(
       { actor_type: "user", headers: {} },
       service as any

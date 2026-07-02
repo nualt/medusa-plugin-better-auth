@@ -4,7 +4,12 @@
 // "auto-link on verified-email" path for admins — this is the sole entry
 // point and it always requires both invariants to hold.
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { MedusaError, Modules } from "@medusajs/framework/utils"
+import {
+  ContainerRegistrationKeys,
+  MedusaError,
+  Modules,
+} from "@medusajs/framework/utils"
+import type { PostgresAdvisoryLockConnection } from "../../../../../lib/postgres-advisory-lock"
 import { ensureLinkedIdentity, getSessionUser } from "../helpers"
 
 export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
@@ -37,7 +42,10 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
     req.scope.resolve(Modules.AUTH),
     baUser,
     "user_id",
-    adminUser.id
+    adminUser.id,
+    req.scope.resolve(
+      ContainerRegistrationKeys.PG_CONNECTION
+    ) as PostgresAdvisoryLockConnection
   )
   if (!linked) {
     throw new MedusaError(

@@ -13,6 +13,35 @@ release changelog.
 
 ## Implemented
 
+### Distinguish identity-not-found from provider failures
+
+- **Date:** 2026-07-02
+- **Status:** Implemented
+- **Problem:** `BetterAuthProviderService.authenticate` treated every identity
+  retrieval failure as a missing identity. A database or provider failure could
+  therefore enter the customer identity creation path or show an incorrect
+  admin linking error.
+- **Decision:** Enter the create/link path only for a Medusa `NOT_FOUND`
+  error. Propagate all other errors unchanged so infrastructure failures remain
+  observable and cannot trigger writes.
+- **Verification:** Unit coverage for first-time customers, unlinked admins,
+  and database failures that must not create an identity.
+
+### Serialize identity linking across backend processes
+
+- **Date:** 2026-07-02
+- **Status:** Implemented
+- **Problem:** `ensureLinkedIdentity` used a check-then-create/update sequence.
+  Concurrent requests could both observe empty actor metadata and overwrite
+  each other, even though Medusa's unique provider-identity index prevents
+  duplicate rows.
+- **Decision:** Serialize the full read/create/update sequence per Better Auth
+  identity with a transaction-scoped PostgreSQL advisory lock. The database
+  releases the lock automatically on success or failure, and the lock works
+  across backend processes.
+- **Verification:** Unit coverage for idempotent concurrent links, conflicting
+  concurrent links, lock acquisition order, and failure cleanup.
+
 ### Polish the admin Google sign-in action
 
 - **Date:** 2026-07-02
@@ -65,18 +94,6 @@ release changelog.
 No additional work has been accepted yet.
 
 ## Candidates
-
-### P1 — Distinguish identity-not-found from provider failures
-
-`BetterAuthProviderService.authenticate` currently treats every identity
-retrieval error as a missing identity. Only the expected not-found error should
-enter the create/link path; infrastructure and database errors should surface.
-
-### P1 — Make identity linking concurrency-safe
-
-`ensureLinkedIdentity` uses a check-then-create/update sequence. Add conflict
-handling or an atomic strategy so concurrent link attempts cannot create
-duplicates or lose actor metadata.
 
 ### P2 — Provide an explicit production migration command
 

@@ -3,6 +3,10 @@ import type { IAuthModuleService } from "@medusajs/framework/types"
 import { MedusaError } from "@medusajs/framework/utils"
 import { getBetterAuth } from "../../../../lib/better-auth"
 import { nodeHeadersToFetch } from "../../../../lib/node-headers"
+import {
+  PostgresAdvisoryLockConnection,
+  withPostgresAdvisoryLock,
+} from "../../../../lib/postgres-advisory-lock"
 
 export const PROVIDER = "better-auth"
 
@@ -36,9 +40,22 @@ export async function ensureLinkedIdentity(
   authService: IAuthModuleService,
   baUser: BridgeSessionUser,
   actorKey: "customer_id" | "user_id",
+  actorId: string,
+  connection: PostgresAdvisoryLockConnection
+): Promise<boolean> {
+  const lockKey = `medusa-plugin-better-auth:link:${PROVIDER}:${baUser.id}`
+
+  return withPostgresAdvisoryLock(connection, lockKey, () =>
+    linkIdentity(authService, baUser, actorKey, actorId)
+  )
+}
+
+async function linkIdentity(
+  authService: IAuthModuleService,
+  baUser: BridgeSessionUser,
+  actorKey: "customer_id" | "user_id",
   actorId: string
 ): Promise<boolean> {
-  // Check-then-create window is acceptable: linking is a human-rate operation and re-runs are idempotent.
   const [providerIdentity] = await authService.listProviderIdentities({
     provider: PROVIDER,
     entity_id: baUser.id,

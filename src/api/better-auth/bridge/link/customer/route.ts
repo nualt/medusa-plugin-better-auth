@@ -1,6 +1,11 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { MedusaError, Modules } from "@medusajs/framework/utils"
+import {
+  ContainerRegistrationKeys,
+  MedusaError,
+  Modules,
+} from "@medusajs/framework/utils"
 import { getPluginOptions } from "../../../../../lib/better-auth"
+import type { PostgresAdvisoryLockConnection } from "../../../../../lib/postgres-advisory-lock"
 import { ensureLinkedIdentity, getSessionUser } from "../helpers"
 
 export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
@@ -35,7 +40,10 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
     req.scope.resolve(Modules.AUTH),
     baUser,
     "customer_id",
-    customer.id
+    customer.id,
+    req.scope.resolve(
+      ContainerRegistrationKeys.PG_CONNECTION
+    ) as PostgresAdvisoryLockConnection
   )
   if (!linked) {
     throw new MedusaError(
