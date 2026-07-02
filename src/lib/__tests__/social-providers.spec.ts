@@ -61,6 +61,17 @@ describe("socialProvidersFromEnv", () => {
         DISCORD_CLIENT_SECRET: "s",
       })
     ).toEqual({})
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("DISCORD_CLIENT_ID")
+    )
+  })
+
+  it("warns with the missing CLIENT_ID when only the secret is set", () => {
+    const result = socialProvidersFromEnv({ GITHUB_CLIENT_SECRET: "s" })
+    expect(result).toEqual({})
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("GITHUB_CLIENT_ID")
+    )
   })
 
   it("does not scan providers outside the registry", () => {
