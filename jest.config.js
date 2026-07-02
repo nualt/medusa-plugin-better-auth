@@ -14,6 +14,6 @@ module.exports = {
   testMatch: ["**/src/**/__tests__/**/*.spec.[jt]s"],
   modulePathIgnorePatterns: ["<rootDir>/.medusa/"],
   transformIgnorePatterns: [
-    "node_modules/(?!(better-auth)/)",
+    "/node_modules/\\.pnpm/(?!(better-auth@|@better-auth\\+|@better-fetch\\+|better-call@|nanostores@|jose@|kysely@|@noble\\+))",
   ],
 }

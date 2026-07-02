@@ -23,6 +23,17 @@ let nodeHandler: ((req: MedusaRequest, res: MedusaResponse) => void) | null =
   null
 let corsMiddlewareHandler: ReturnType<typeof cors> | null = null
 
+// Attempt fail-fast at import time: when configManager is already populated
+// (production boot or integration tests), validate plugin options now so a
+// bad config throws before any request arrives.
+// Under pnpm monorepos, each package resolves its own copy of configManager
+// (peer-dependency hash differs between the plugin and the backend), so this
+// singleton may be empty at import time — in that case we defer validation to
+// the ready IIFE below where configLoader() is called first.
+if (configManager.config?.projectConfig?.databaseUrl) {
+  getPluginOptions() // throws immediately if options are invalid
+}
+
 // In pnpm monorepos, each package resolves its own singleton of configManager
 // because peer-dependency hashes differ between the plugin and the backend.
 // We therefore bootstrap the plugin's configManager instance explicitly
@@ -93,16 +104,29 @@ const ready: Promise<BetterAuthInstance> = (async () => {
   return auth
 })()
 
+// Log one loud, actionable error at boot so operators can diagnose the root
+// cause instead of seeing opaque 500s on the first /better-auth/* request.
+ready.catch((err) => {
+  console.error(
+    "[medusa-plugin-better-auth] Initialisation failed — all /better-auth/* requests will return errors. Root cause:",
+    err
+  )
+})
+
 async function corsMiddleware(
   req: MedusaRequest,
   res: MedusaResponse,
   next: MedusaNextFunction
 ) {
-  await ready
-  if (corsMiddlewareHandler) {
-    return corsMiddlewareHandler(req, res, next)
+  try {
+    await ready
+    if (corsMiddlewareHandler) {
+      return corsMiddlewareHandler(req, res, next)
+    }
+    return next()
+  } catch (error) {
+    return next(error)
   }
-  return next()
 }
 
 async function betterAuthRouter(
