@@ -13,4 +13,7 @@ module.exports = {
   moduleFileExtensions: ["js", "ts", "tsx", "json"],
   testMatch: ["**/src/**/__tests__/**/*.spec.[jt]s"],
   modulePathIgnorePatterns: ["<rootDir>/.medusa/"],
+  transformIgnorePatterns: [
+    "node_modules/(?!(better-auth)/)",
+  ],
 }
