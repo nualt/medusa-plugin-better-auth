@@ -1,8 +1,28 @@
+import { isAbsolute } from "node:path"
+import { pathToFileURL } from "node:url"
+
 export type LazyBetterAuthPlugin = {
   __lazyBetterAuthPlugin: true
   module: string
   export: string
   options?: unknown
+}
+
+function normalizeModuleSpecifier(moduleSpecifier: string): string {
+  if (
+    moduleSpecifier === "." ||
+    moduleSpecifier === ".." ||
+    moduleSpecifier.startsWith("./") ||
+    moduleSpecifier.startsWith("../")
+  ) {
+    throw new Error(
+      `[medusa-plugin-better-auth] relative Better Auth plugin module "${moduleSpecifier}" is ambiguous after compilation. Use an installed package name, an absolute path, or a file: URL.`
+    )
+  }
+
+  return isAbsolute(moduleSpecifier)
+    ? pathToFileURL(moduleSpecifier).href
+    : moduleSpecifier
 }
 
 /**
@@ -17,7 +37,7 @@ export function lazyBetterAuthPlugin(
 ): LazyBetterAuthPlugin {
   return {
     __lazyBetterAuthPlugin: true,
-    module: moduleSpecifier,
+    module: normalizeModuleSpecifier(moduleSpecifier),
     export: exportName,
     options,
   }
@@ -38,7 +58,8 @@ export async function resolveLazyPlugins(
   return Promise.all(
     plugins.map(async (entry) => {
       if (!isLazy(entry)) return entry
-      const mod = (await import(entry.module)) as Record<string, unknown>
+      const moduleSpecifier = normalizeModuleSpecifier(entry.module)
+      const mod = (await import(moduleSpecifier)) as Record<string, unknown>
       const factory = mod[entry.export]
       if (typeof factory !== "function") {
         throw new Error(

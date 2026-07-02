@@ -22,6 +22,7 @@ const resolved: ResolvedPluginOptions = {
   betterAuth: { secret: "test-secret", emailAndPassword: { enabled: true } },
   autoLink: "verified-email",
   autoMigrate: false,
+  normalizeCustomerEmails: true,
   databaseUrl: "postgres://postgres:postgres@localhost/never-connected",
   trustedOrigins: ["http://localhost:8000"],
 }

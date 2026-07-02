@@ -1,4 +1,5 @@
 import { lazyBetterAuthPlugin, resolveLazyPlugins } from "../lazy-plugins"
+import { pathToFileURL } from "node:url"
 
 describe("lazyBetterAuthPlugin", () => {
   it("builds a descriptor with defaults", () => {
@@ -9,6 +10,19 @@ describe("lazyBetterAuthPlugin", () => {
       export: "magicLink",
       options: { a: 1 },
     })
+  })
+
+  it("rejects relative module paths that change meaning after compilation", () => {
+    expect(() =>
+      lazyBetterAuthPlugin("customPlugin", {}, "./custom-plugin")
+    ).toThrow(/relative.*ambiguous/i)
+  })
+
+  it("normalizes absolute module paths to portable file URLs", () => {
+    const absolutePath = "/tmp/custom-plugin.mjs"
+    expect(
+      lazyBetterAuthPlugin("customPlugin", {}, absolutePath).module
+    ).toBe(pathToFileURL(absolutePath).href)
   })
 })
 
@@ -37,5 +51,17 @@ describe("resolveLazyPlugins", () => {
     await expect(
       resolveLazyPlugins([lazyBetterAuthPlugin("nopeNope")])
     ).rejects.toThrow(/nopeNope/)
+  })
+
+  it("also rejects handcrafted descriptors with relative module paths", async () => {
+    await expect(
+      resolveLazyPlugins([
+        {
+          __lazyBetterAuthPlugin: true,
+          module: "../custom-plugin",
+          export: "customPlugin",
+        },
+      ])
+    ).rejects.toThrow(/relative.*ambiguous/i)
   })
 })
