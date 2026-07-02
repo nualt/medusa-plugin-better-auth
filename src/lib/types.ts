@@ -1,4 +1,5 @@
 import type { BetterAuthOptions } from "better-auth" with { "resolution-mode": "import" }
+import type { LazyBetterAuthPlugin } from "./lazy-plugins"
 
 export type AutoLinkPolicy = "verified-email" | "never"
 
@@ -10,7 +11,12 @@ export interface BetterAuthPluginOptions {
    * Passthrough Better Auth configuration. `database` and `basePath` are
    * managed by the plugin and cannot be set here.
    */
-  betterAuth: Omit<BetterAuthOptions, "database" | "basePath">
+  betterAuth: Omit<BetterAuthOptions, "database" | "basePath" | "plugins"> & {
+    plugins?: (
+      | NonNullable<BetterAuthOptions["plugins"]>[number]
+      | LazyBetterAuthPlugin
+    )[]
+  }
   /**
    * Whether a Better Auth identity may be linked automatically to an
    * existing Medusa actor sharing the same email. "verified-email"

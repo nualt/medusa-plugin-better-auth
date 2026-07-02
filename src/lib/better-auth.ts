@@ -1,8 +1,12 @@
 import { Pool } from "pg"
 import { configManager } from "@medusajs/framework/config"
 import { resolvePluginOptions } from "./options"
+import { resolveLazyPlugins } from "./lazy-plugins"
 import type { ResolvedPluginOptions } from "./types"
-import type { betterAuth } from "better-auth" with { "resolution-mode": "import" }
+import type {
+  betterAuth,
+  BetterAuthPlugin,
+} from "better-auth" with { "resolution-mode": "import" }
 
 export const BASE_PATH = "/better-auth"
 
@@ -12,16 +16,20 @@ export async function buildBetterAuth(
   resolved: ResolvedPluginOptions
 ): Promise<BetterAuthInstance> {
   const { betterAuth } = await import("better-auth")
+  // Destructure plugins out so the spread below doesn't carry the widened type.
+  const { plugins: rawPlugins, ...userWithoutPlugins } = resolved.betterAuth
   const user = resolved.betterAuth
   const userTrusted = Array.isArray(user.trustedOrigins)
     ? user.trustedOrigins
     : []
 
+  const plugins = await resolveLazyPlugins(rawPlugins as unknown[] | undefined)
+
   // Cast needed: betterAuth<{specific}> returns Auth<{specific}> which is
   // structurally incompatible with Auth<BetterAuthOptions> at the generic
   // type level even though specific extends BetterAuthOptions.
   return betterAuth({
-    ...user,
+    ...userWithoutPlugins,
     database: new Pool({ connectionString: resolved.databaseUrl }),
     basePath: BASE_PATH,
     trustedOrigins: [...resolved.trustedOrigins, ...userTrusted],
@@ -29,6 +37,7 @@ export async function buildBetterAuth(
     session: { modelName: "ba_session", ...user.session },
     account: { modelName: "ba_account", ...user.account },
     verification: { modelName: "ba_verification", ...user.verification },
+    ...(plugins.length ? { plugins: plugins as BetterAuthPlugin[] } : {}),
   }) as unknown as BetterAuthInstance
 }
 
