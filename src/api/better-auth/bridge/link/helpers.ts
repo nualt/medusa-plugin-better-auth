@@ -1,5 +1,6 @@
 import type { MedusaRequest } from "@medusajs/framework/http"
 import type { IAuthModuleService } from "@medusajs/framework/types"
+import { MedusaError } from "@medusajs/framework/utils"
 import { getBetterAuth } from "../../../../lib/better-auth"
 import { nodeHeadersToFetch } from "../../../../lib/node-headers"
 
@@ -37,6 +38,7 @@ export async function ensureLinkedIdentity(
   actorKey: "customer_id" | "user_id",
   actorId: string
 ): Promise<boolean> {
+  // Check-then-create window is acceptable: linking is a human-rate operation and re-runs are idempotent.
   const [providerIdentity] = await authService.listProviderIdentities({
     provider: PROVIDER,
     entity_id: baUser.id,
@@ -63,8 +65,14 @@ export async function ensureLinkedIdentity(
     return true
   }
 
+  if (!providerIdentity.auth_identity_id) {
+    throw new MedusaError(
+      MedusaError.Types.UNEXPECTED_STATE,
+      "Provider identity has no auth identity"
+    )
+  }
   const identity = await authService.retrieveAuthIdentity(
-    providerIdentity.auth_identity_id!
+    providerIdentity.auth_identity_id
   )
   const appMetadata = (identity.app_metadata ?? {}) as Record<string, unknown>
 
