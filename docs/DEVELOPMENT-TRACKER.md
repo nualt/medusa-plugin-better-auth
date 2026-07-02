@@ -13,6 +13,32 @@ release changelog.
 
 ## Implemented
 
+### Normalize native customer emails without unsafe guest merging
+
+- **Date:** 2026-07-02
+- **Status:** Implemented
+- **Problem:** Medusa's native `emailpass`, customer, and cart routes preserve
+  input casing while PostgreSQL unique indexes compare text case-sensitively.
+  A customer could therefore register `Jane@Example.com` beside an existing
+  `jane@example.com`, and guest/customer rows appeared inconsistently in the
+  admin panel.
+- **Decision:** Add the default-on `normalizeCustomerEmails` policy. Normalize
+  new native customer registrations, customer creation, and cart emails to
+  trimmed lowercase. Resolve native password login against an existing
+  identity case-insensitively so legacy mixed-case accounts remain usable.
+  Reject ambiguous identities and active customer duplicates; allow guest
+  rows because guest-to-account progression is valid. Never transfer guest
+  orders solely by matching an email string.
+- **Security:** Historical orders must use Medusa's transfer request and email
+  confirmation flow. This proves access to the order mailbox before attaching
+  it to the authenticated customer.
+- **Verification:** Unit coverage for normalization, legacy login,
+  case-insensitive conflicts, disabled policy, customer writes, and carts.
+  HTTP integration coverage was added for native registration, customer
+  creation, mixed-case login, guest coexistence, and active-account rejection;
+  execution remains in the release checklist because it requires the connected
+  PostgreSQL/Redis test environment.
+
 ### Distinguish identity-not-found from provider failures
 
 - **Date:** 2026-07-02
@@ -129,11 +155,12 @@ release changelog.
   `Jane@Corp.com` could never link a Google identity reporting
   `jane@corp.com`.
 - **Decision:** Query with a case-insensitive filter (`$ilike`, with ILIKE
-  wildcards escaped so the email stays a literal) and, when several accounts
-  differ only by casing, prefer the exact-case match.
-- **Verification:** Unit coverage for wildcard escaping and actor selection;
-  HTTP integration test linking an admin whose stored casing differs from the
-  provider email.
+  wildcards escaped so the email stays a literal). Link a single match
+  regardless of casing, but reject multiple matches with `CONFLICT` instead of
+  choosing an arbitrary account.
+- **Verification:** Unit coverage for wildcard escaping, single-match casing,
+  empty results, and ambiguous duplicates; HTTP integration test linking an
+  admin whose stored casing differs from the provider email.
 
 ### Distinguish technical failures from unlinked identities in the admin widget
 
@@ -143,10 +170,14 @@ release changelog.
   and network errors) showed the "no admin account is linked" invitation
   message, sending operators down the wrong path.
 - **Decision:** Map only 401/403 responses to the unlinked message; all other
-  failures show the generic sign-in failure notice. The failure notice also
-  renders when the provider list is empty so the error is never hidden.
-- **Verification:** Admin extension production build. Manual admin OAuth
-  error-path review remains in the release checklist.
+  failures show the generic sign-in failure notice. A successful empty session
+  response is the only `no-session` case; session lookup failures and
+  unexpected promise rejections remain technical failures. The failure notice
+  also renders when the provider list is empty so the error is never hidden.
+- **Verification:** Unit coverage for empty sessions, session lookup failures,
+  authorization refusals, exchange failures, and successful redirects. Admin
+  extension production build and manual OAuth error-path review remain in the
+  release checklist.
 
 ### Document production hardening requirements
 
@@ -210,10 +241,13 @@ release changelog.
 - **Decision:** Export `lazyBetterAuthPlugin(name, options)` from
   `lib/lazy-plugins`. The function returns a lightweight descriptor; the plugin
   resolves it via dynamic `import()` when building the Better Auth instance.
-  Supports custom module specifiers for forked or local plugins.
+  Custom module specifiers may be installed package names, absolute paths, or
+  `file:` URLs. Relative paths are rejected because their base changes after
+  compilation.
 - **Verification:** Unit coverage for descriptor creation, resolution success,
-  missing export detection, and options passthrough. Integration test: magic
-  link plugin declared lazily in `medusa-config.ts` boots successfully.
+  missing export detection, options passthrough, relative-path rejection, and
+  absolute-path normalization. Integration test: magic link plugin declared
+  lazily in `medusa-config.ts` boots successfully.
 
 ### Magic link on the storefront (Resend + dev fallback)
 

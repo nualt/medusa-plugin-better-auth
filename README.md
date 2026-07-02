@@ -2,7 +2,7 @@
 
 [Better Auth](https://better-auth.com) as the authentication engine for
 [Medusa v2](https://medusajs.com) — social OAuth, email & password, magic
-links, passkeys and 2FA for **both customers and admin users**, without
+links, passkeys and optional 2FA (via Better Auth plugins) for **both customers and admin users**, without
 touching Medusa's native session model.
 
 ## How it works
@@ -148,6 +148,12 @@ betterAuth: {
 }
 ```
 
+The optional module specifier accepts an installed package name, an absolute
+path, or a `file:` URL. Relative paths such as `./my-plugin` are rejected
+because they would resolve from the plugin's compiled directory rather than
+from your Medusa project. The default `better-auth/plugins` module used above
+needs no extra configuration.
+
 ## Magic link (passwordless)
 
 Full recipe: enable the plugin as above, send the email (or log the link
@@ -162,7 +168,7 @@ See the working implementation in nualt-shop
 | Endpoint | Purpose |
 | --- | --- |
 | `ALL /better-auth/*` | Every Better Auth flow (sign-in, callbacks, magic links…) |
-| `GET /better-auth/bridge/providers` | Configured methods, for building login UIs |
+| `GET /better-auth/bridge/providers` | Configured methods (`social`, `email_password`, `magic_link`), for building login UIs |
 | `POST /better-auth/bridge/link/customer` | Link the session identity to an existing customer (idempotent) |
 | `POST /better-auth/bridge/link/user` | Link to an existing admin user (401 if none) |
 | `POST /auth/customer/better-auth` | Exchange the session for a Medusa customer token (core route) |
@@ -172,10 +178,12 @@ See the working implementation in nualt-shop
 
 ```ts
 import { createAuthClient } from "better-auth/react"
+import { magicLinkClient } from "better-auth/client/plugins"
 
 export const authClient = createAuthClient({
   baseURL: `${BACKEND_URL}/better-auth`,
   fetchOptions: { credentials: "include" },
+  plugins: [magicLinkClient()],
 })
 ```
 
@@ -216,6 +224,7 @@ existing invited admin user.
 | `betterAuth` | — (required) | Passthrough Better Auth config. `database` and `basePath` are managed by the plugin; core table names default to `ba_user`, `ba_session`, `ba_account`, `ba_verification`. |
 | `autoLink` | `"verified-email"` | Controls automatic identity linking for **customers** only: `"verified-email"` links when the provider verified the email; `"never"` never links automatically. Admin linking is always explicit — an invited admin user must exist and the provider must have verified the email; `autoLink` has no effect on the `link/user` route. |
 | `autoMigrate` | `NODE_ENV !== "production"` | Run Better Auth schema migrations at boot. |
+| `normalizeCustomerEmails` | `true` | Lowercase and trim new native Medusa customer/cart emails, resolve native `emailpass` logins case-insensitively, and reject registration when an active customer already exists with different casing. |
 
 Secret resolution: `betterAuth.secret`, else `BETTER_AUTH_SECRET`. The
 server refuses to boot without one. Caveat: in setups where the config
@@ -224,6 +233,25 @@ failure surfaces as a logged startup error and 500s on `/better-auth/*`
 instead of a hard boot refusal. Trusted origins are derived from your
 Medusa `authCors`/`storeCors`/`adminCors` and merged with any
 `betterAuth.trustedOrigins` you provide.
+
+## Customer email normalization and guest orders
+
+With `normalizeCustomerEmails` enabled, the plugin applies one canonical email
+form to native Medusa customer registration, customer creation, and guest cart
+writes. Existing mixed-case `emailpass` identities remain usable: login first
+resolves the stored identity case-insensitively, then authenticates against its
+existing password hash.
+
+An existing `has_account: true` customer blocks another native registration
+with the same email under different casing. An existing guest customer
+(`has_account: false`) does not: Medusa deliberately keeps guest and registered
+customer records separate.
+
+The plugin never merges guest orders automatically based on an email string.
+After login, expose Medusa's order-transfer flow to let the customer request a
+transfer (`POST /store/orders/:id/transfer/request`) and confirm it using the
+token sent to the order email. This proves mailbox ownership before order data
+is attached to the account.
 
 ## Production checklist
 
@@ -266,9 +294,9 @@ and the API on `api.example.com`, configure
 "works locally, fails in production" reports.
 
 **Postgres connections.** The plugin runs its own `pg` pool (default max
-10 per instance) next to Medusa's. Size your database or pooler
-(pgbouncer) accordingly, or lower the Better Auth pool via
-`betterAuth.database` advanced options.
+10 per instance) next to Medusa's. The plugin owns this database option, so it
+cannot currently be tuned through `betterAuth.database`; size your database
+or pooler (pgbouncer) accordingly.
 
 **Session table growth.** Expired `ba_session` rows are not purged
 eagerly; schedule a periodic cleanup
