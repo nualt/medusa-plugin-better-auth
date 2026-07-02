@@ -4,6 +4,7 @@ import {
   ADMIN_OAUTH_CALLBACK_URL,
   isAdminOAuthCallback,
 } from "../../lib/admin-oauth"
+import { completeAdminLogin } from "../../lib/admin-login"
 import { getProviderDisplay, ProviderIcon } from "./provider-icons"
 
 const BASE = "/better-auth"
@@ -15,43 +16,6 @@ async function fetchJson(input: string, init?: RequestInit) {
   if (!res.ok) throw Object.assign(new Error(res.statusText), { status: res.status })
   const text = await res.text()
   return text ? JSON.parse(text) : null
-}
-
-/**
- * Si une session Better Auth existe (retour d'OAuth), l'échange contre
- * une session admin Medusa : link → token → session cookie → /app.
- */
-async function completeAdminLogin(): Promise<
-  "done" | "no-session" | "unlinked" | "failed"
-> {
-  let session: { user?: unknown } | null = null
-  try {
-    session = await fetchJson(`${BASE}/get-session`)
-  } catch {
-    return "no-session"
-  }
-  if (!session?.user) return "no-session"
-
-  try {
-    await fetchJson(`${BASE}/bridge/link/user`, { method: "POST" })
-    const { token } = await fetchJson(`/auth/user/better-auth`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: "{}",
-    })
-    await fetchJson(`/auth/session`, {
-      method: "POST",
-      headers: { authorization: `Bearer ${token}` },
-    })
-  } catch (error) {
-    // Seul un refus d'authentification signifie « identité non liée ».
-    // Tout autre échec (500, réseau) est un problème technique : le
-    // message d'invitation serait trompeur.
-    const status = (error as { status?: number }).status
-    return status === 401 || status === 403 ? "unlinked" : "failed"
-  }
-  window.location.href = "/app"
-  return "done"
 }
 
 const BetterAuthLoginWidget = () => {
@@ -77,14 +41,16 @@ const BetterAuthLoginWidget = () => {
       return
     }
 
-    completeAdminLogin()
+    completeAdminLogin(fetchJson, (url) => {
+      window.location.href = url
+    })
       .then((result) => {
         if (result === "unlinked") setStatus("unlinked")
         else if (result === "failed") setStatus("failed")
         else if (result === "no-session") setStatus("idle")
         // "done" : la page est en cours de redirection.
       })
-      .catch(() => setStatus("idle"))
+      .catch(() => setStatus("failed"))
   }, [])
 
   const signIn = async (provider: string) => {
