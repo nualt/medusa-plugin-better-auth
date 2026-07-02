@@ -4,6 +4,7 @@ import {
   ADMIN_OAUTH_CALLBACK_URL,
   isAdminOAuthCallback,
 } from "../../lib/admin-oauth"
+import { ProviderIcon } from "./provider-icons"
 
 const BASE = "/better-auth"
 
@@ -61,31 +62,6 @@ const PROVIDER_LABELS: Record<string, string> = {
   facebook: "Facebook",
   microsoft: "Microsoft",
 }
-
-const GoogleIcon = () => (
-  <svg
-    aria-hidden="true"
-    viewBox="0 0 18 18"
-    className="size-4 shrink-0"
-  >
-    <path
-      fill="#4285F4"
-      d="M17.64 9.205c0-.638-.057-1.252-.164-1.841H9v3.482h4.844a4.14 4.14 0 0 1-1.797 2.716v2.259h2.909c1.702-1.567 2.684-3.875 2.684-6.616Z"
-    />
-    <path
-      fill="#34A853"
-      d="M9 18c2.43 0 4.468-.806 5.956-2.18l-2.91-2.258c-.805.54-1.835.86-3.046.86-2.344 0-4.328-1.585-5.037-3.714H.956v2.332A9 9 0 0 0 9 18Z"
-    />
-    <path
-      fill="#FBBC05"
-      d="M3.963 10.708A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.281-1.708V4.96H.956A9 9 0 0 0 0 9c0 1.452.347 2.827.956 4.04l3.007-2.332Z"
-    />
-    <path
-      fill="#EA4335"
-      d="M9 3.58c1.322 0 2.508.455 3.442 1.346l2.582-2.582C13.464.892 11.426 0 9 0A9 9 0 0 0 .956 4.96l3.007 2.332C4.672 5.163 6.656 3.58 9 3.58Z"
-    />
-  </svg>
-)
 
 const BetterAuthLoginWidget = () => {
   const [providers, setProviders] = useState<string[]>([])
@@ -166,7 +142,7 @@ const BetterAuthLoginWidget = () => {
           onClick={() => signIn(provider)}
           className="bg-ui-bg-base hover:bg-ui-bg-base-hover border-ui-border-strong text-ui-fg-base shadow-buttons-neutral flex w-full items-center justify-center gap-x-2.5 rounded-md border px-3 py-2.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {provider === "google" && <GoogleIcon />}
+          <ProviderIcon provider={provider} />
           <span>Continue with {PROVIDER_LABELS[provider] ?? provider}</span>
         </button>
       ))}
