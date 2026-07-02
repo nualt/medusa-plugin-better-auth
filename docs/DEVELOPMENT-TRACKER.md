@@ -168,9 +168,84 @@ release changelog.
   `create-medusa-app` template (npm tarball install, migrate CLI, boot,
   full customer and admin flows, admin widget render).
 
+### Curated zero-config provider registry
+
+- **Date:** 2026-07-02
+- **Status:** Implemented
+- **Problem:** OAuth provider credentials must be configured case by case in
+  `medusa-config.ts`, even for the small set of commonly deployed B2C
+  providers. Repetitive boilerplate hides the simpler patterns.
+- **Decision:** Curate a registry of 8 B2C-friendly providers (Google, Apple,
+  Facebook, Microsoft, Discord, TikTok, X, GitHub). The
+  `socialProvidersFromEnv()` function scans the environment for
+  `<PREFIX>_CLIENT_ID` + `<PREFIX>_CLIENT_SECRET` pairs and builds the config
+  in one line. Incomplete pairs trigger an explicit boot warning; other
+  providers still work via passthrough merge.
+- **Verification:** Unit coverage for complete/incomplete pairs and env var
+  fallback. Integration test confirms boot warning appears and provider
+  registration succeeds.
+
+### Shared brand icons with fallback
+
+- **Date:** 2026-07-02
+- **Status:** Implemented
+- **Problem:** Login UI buttons need per-provider brand icons. Storefront and
+  admin widgets would both need icon libraries or SVG lookups, leading to
+  duplication and divergence.
+- **Decision:** Ship `ProviderIconSpec` and `getProviderDisplay()` in the
+  shared icons package. The data includes brand SVG, colors, and labels for
+  all eight curated providers. UI components reference it and render a clean
+  initial-letter fallback for unlisted providers.
+- **Verification:** Shared icons package exports are correct. Storefront
+  and admin both use the same spec and render consistently (no color or icon
+  divergence).
+
+### Lazy Better Auth plugin descriptors (CJS configs)
+
+- **Date:** 2026-07-02
+- **Status:** Implemented
+- **Problem:** `medusa-config.ts` compiles to CommonJS, but `better-auth/plugins`
+  exports are ESM-only. A static `import` in the config would crash at require
+  time.
+- **Decision:** Export `lazyBetterAuthPlugin(name, options)` from
+  `lib/lazy-plugins`. The function returns a lightweight descriptor; the plugin
+  resolves it via dynamic `import()` when building the Better Auth instance.
+  Supports custom module specifiers for forked or local plugins.
+- **Verification:** Unit coverage for descriptor creation, resolution success,
+  missing export detection, and options passthrough. Integration test: magic
+  link plugin declared lazily in `medusa-config.ts` boots successfully.
+
+### Magic link on the storefront (Resend + dev fallback)
+
+- **Date:** 2026-07-02
+- **Status:** Implemented
+- **Problem:** Passwordless workflows require email delivery. Development
+  should not depend on live email services; production must use a reliable
+  provider.
+- **Decision:** Implement the magic link handler in `medusa-config.ts`:
+  in test mode, capture links to `globalThis.__capturedMagicLinks` (for
+  automated verification); in production with `RESEND_API_KEY`, send via
+  Resend's API; in development without the key, log the link to console.
+  Storefront form calls `authClient.signIn.magicLink()` with a
+  `?better-auth=1` callback marker; the session exchange handles the rest.
+  French copy throughout.
+- **Verification:** Unit test confirms test-mode capture; manual storefront
+  flow in dev (console link) and staging (Resend delivery) both work; release
+  checklist includes magic link and provider button manual tests.
+
 ## Planned
 
-No additional work has been accepted yet.
+### Extract the plugin to a standalone repository
+
+- **Date:** 2026-07-02
+- **Status:** Planned
+- **Scope:** Increment 3. Use `git subtree split` to preserve history,
+  initialize a clean GitHub repo with CI (tests, build, types), configure
+  automated npm publication, and update nualt-shop to consume the published
+  version. The shop remains the primary test bench until extraction, so
+  development continues in the monorepo; after extraction, the extracted repo
+  becomes the source of truth.
+- **Dependencies:** All prior tasks (Tasks 1–5) must be complete and shipping.
 
 ## Candidates
 

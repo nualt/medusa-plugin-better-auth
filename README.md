@@ -91,6 +91,72 @@ running it on every deploy is safe.
 The plugin requires Better Auth `>= 1.5.0` (the migration API moved to
 `better-auth/db/migration` in 1.5.0); it is verified against 1.6.x.
 
+## Zero-config providers
+
+Set a pair of environment variables and the provider is live — button and
+brand icon included, on both the storefront helpers and the admin login
+widget:
+
+```ts
+socialProviders: socialProvidersFromEnv(),
+```
+
+| Provider | Environment variables |
+| --- | --- |
+| Google | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` |
+| Apple | `APPLE_CLIENT_ID` / `APPLE_CLIENT_SECRET` |
+| Facebook | `FACEBOOK_CLIENT_ID` / `FACEBOOK_CLIENT_SECRET` |
+| Microsoft | `MICROSOFT_CLIENT_ID` / `MICROSOFT_CLIENT_SECRET` |
+| Discord | `DISCORD_CLIENT_ID` / `DISCORD_CLIENT_SECRET` |
+| TikTok | `TIKTOK_CLIENT_ID` / `TIKTOK_CLIENT_SECRET` |
+| X (Twitter) | `TWITTER_CLIENT_ID` / `TWITTER_CLIENT_SECRET` |
+| GitHub | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` |
+
+An incomplete pair (ID without SECRET) is ignored with an explicit boot
+warning. Providers outside this list still work through the regular
+passthrough — merge them in manually:
+
+```ts
+socialProviders: { ...socialProvidersFromEnv(), zoom: { clientId, clientSecret } },
+```
+
+The UI helpers render a clean fallback (initial-letter badge) for any
+provider without a bundled brand icon.
+
+> **Apple**: `APPLE_CLIENT_SECRET` is not a static secret but a signed JWT
+> you generate from your Apple Developer `.p8` key (six-month max
+> lifetime). Generate it, then treat it as a regular env var.
+
+## Better Auth plugins from your Medusa config
+
+`medusa-config.ts` compiles to CommonJS, but `better-auth/plugins` is
+ESM-only — a static import would crash at require time. Declare plugins
+lazily instead; the plugin resolves them with a dynamic import when the
+Better Auth instance is built:
+
+```ts
+import { lazyBetterAuthPlugin } from "medusa-plugin-better-auth/lib/lazy-plugins"
+
+betterAuth: {
+  plugins: [
+    lazyBetterAuthPlugin("magicLink", {
+      sendMagicLink: async ({ email, url }) => {
+        // send the email with your provider (Resend, SMTP…)
+      },
+    }),
+  ],
+}
+```
+
+## Magic link (passwordless)
+
+Full recipe: enable the plugin as above, send the email (or log the link
+in dev), and point `callbackURL` at your storefront page with the
+`?better-auth=1` marker — the standard session exchange handles the rest.
+See the working implementation in nualt-shop
+(`apps/backend/medusa-config.ts` and
+`apps/storefront/src/modules/account/components/better-auth-login/`).
+
 ## Endpoints
 
 | Endpoint | Purpose |
