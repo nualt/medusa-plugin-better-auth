@@ -1,4 +1,9 @@
-import { ensureLinkedIdentity, type BridgeSessionUser } from "../helpers"
+import {
+  caseInsensitiveEmailFilter,
+  ensureLinkedIdentity,
+  pickActorByEmail,
+  type BridgeSessionUser,
+} from "../helpers"
 import type { PostgresAdvisoryLockConnection } from "../../../../../lib/postgres-advisory-lock"
 
 const baUser: BridgeSessionUser = {
@@ -103,5 +108,36 @@ describe("ensureLinkedIdentity", () => {
 
     expect(results).toEqual([true, false])
     expect(service.updateAuthIdentities).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe("caseInsensitiveEmailFilter", () => {
+  it("wraps the email in an $ilike operator", () => {
+    expect(caseInsensitiveEmailFilter("jane@test.dev")).toEqual({
+      $ilike: "jane@test.dev",
+    })
+  })
+
+  it("escapes ILIKE wildcards so the email stays a literal", () => {
+    expect(caseInsensitiveEmailFilter("j_ne%\\x@test.dev")).toEqual({
+      $ilike: "j\\_ne\\%\\\\x@test.dev",
+    })
+  })
+})
+
+describe("pickActorByEmail", () => {
+  const jane = { id: "1", email: "jane@test.dev" }
+  const janeUpper = { id: "2", email: "Jane@test.dev" }
+
+  it("prefers the exact-case match when several actors differ only by case", () => {
+    expect(pickActorByEmail([janeUpper, jane], "jane@test.dev")).toBe(jane)
+  })
+
+  it("falls back to the first case-insensitive match", () => {
+    expect(pickActorByEmail([janeUpper], "jane@test.dev")).toBe(janeUpper)
+  })
+
+  it("returns undefined when there is no match", () => {
+    expect(pickActorByEmail([], "jane@test.dev")).toBeUndefined()
   })
 })

@@ -18,6 +18,31 @@ export type BridgeSessionUser = {
   image?: string | null
 }
 
+/**
+ * Filtre de correspondance email insensible à la casse pour les listes
+ * Medusa (`listUsers`, `listCustomers`). Medusa stocke les emails tels
+ * que saisis, alors qu'un provider OAuth peut renvoyer une casse
+ * différente de celle de l'invitation / inscription. `%`, `_` et `\`
+ * sont échappés pour que l'email reste un littéral ILIKE. Les types des
+ * filtres Medusa déclarent `email: string`, mais le DAL accepte les
+ * opérateurs MikroORM — d'où le cast côté appelant.
+ */
+export function caseInsensitiveEmailFilter(email: string): { $ilike: string } {
+  return { $ilike: email.replace(/[\\%_]/g, "\\$&") }
+}
+
+/**
+ * Choisit l'acteur à lier parmi les correspondances insensibles à la
+ * casse : priorité à la casse exacte si plusieurs comptes ne diffèrent
+ * que par la casse de l'email.
+ */
+export function pickActorByEmail<T extends { email: string }>(
+  actors: T[],
+  email: string
+): T | undefined {
+  return actors.find((actor) => actor.email === email) ?? actors[0]
+}
+
 export async function getSessionUser(
   req: MedusaRequest
 ): Promise<BridgeSessionUser | null> {

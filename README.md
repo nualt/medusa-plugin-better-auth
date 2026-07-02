@@ -77,8 +77,19 @@ BETTER_AUTH_URL=https://api.your-store.com
 
 3. Create the Better Auth tables. In development the plugin migrates
    automatically at boot (`autoMigrate` defaults to true outside
-   production). For production, run the migration explicitly during your
-   deploy, or temporarily set `autoMigrate: true`.
+   production). For production, run the migration during your deploy,
+   from the directory you start Medusa from:
+
+```bash
+npx medusa-plugin-better-auth migrate
+```
+
+The command loads your `medusa-config`, applies the Better Auth schema
+migrations to the configured database, and exits. It is idempotent, so
+running it on every deploy is safe.
+
+The plugin requires Better Auth `>= 1.5.0` (the migration API moved to
+`better-auth/db/migration` in 1.5.0); it is verified against 1.6.x.
 
 ## Endpoints
 

@@ -6,7 +6,12 @@ import {
 } from "@medusajs/framework/utils"
 import { getPluginOptions } from "../../../../../lib/better-auth"
 import type { PostgresAdvisoryLockConnection } from "../../../../../lib/postgres-advisory-lock"
-import { ensureLinkedIdentity, getSessionUser } from "../helpers"
+import {
+  caseInsensitiveEmailFilter,
+  ensureLinkedIdentity,
+  getSessionUser,
+  pickActorByEmail,
+} from "../helpers"
 
 export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
   const baUser = await getSessionUser(req)
@@ -27,10 +32,13 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
   }
 
   const customerService = req.scope.resolve(Modules.CUSTOMER)
-  const [customer] = await customerService.listCustomers({
-    email: baUser.email,
+  const customers = await customerService.listCustomers({
+    // Le type du filtre déclare `email: string`, mais le DAL Medusa
+    // accepte les opérateurs MikroORM ($ilike) — voir helpers.
+    email: caseInsensitiveEmailFilter(baUser.email) as unknown as string,
     has_account: true,
   })
+  const customer = pickActorByEmail(customers, baUser.email)
   if (!customer) {
     res.status(204).send()
     return

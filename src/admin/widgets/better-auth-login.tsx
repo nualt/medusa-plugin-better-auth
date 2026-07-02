@@ -20,7 +20,9 @@ async function fetchJson(input: string, init?: RequestInit) {
  * Si une session Better Auth existe (retour d'OAuth), l'échange contre
  * une session admin Medusa : link → token → session cookie → /app.
  */
-async function completeAdminLogin(): Promise<"done" | "no-session" | "unlinked"> {
+async function completeAdminLogin(): Promise<
+  "done" | "no-session" | "unlinked" | "failed"
+> {
   let session: { user?: unknown } | null = null
   try {
     session = await fetchJson(`${BASE}/get-session`)
@@ -40,8 +42,12 @@ async function completeAdminLogin(): Promise<"done" | "no-session" | "unlinked">
       method: "POST",
       headers: { authorization: `Bearer ${token}` },
     })
-  } catch {
-    return "unlinked"
+  } catch (error) {
+    // Seul un refus d'authentification signifie « identité non liée ».
+    // Tout autre échec (500, réseau) est un problème technique : le
+    // message d'invitation serait trompeur.
+    const status = (error as { status?: number }).status
+    return status === 401 || status === 403 ? "unlinked" : "failed"
   }
   window.location.href = "/app"
   return "done"
@@ -107,6 +113,7 @@ const BetterAuthLoginWidget = () => {
     completeAdminLogin()
       .then((result) => {
         if (result === "unlinked") setStatus("unlinked")
+        else if (result === "failed") setStatus("failed")
         else if (result === "no-session") setStatus("idle")
         // "done" : la page est en cours de redirection.
       })
@@ -134,7 +141,7 @@ const BetterAuthLoginWidget = () => {
     }
   }
 
-  if (providers.length === 0 && status !== "unlinked") {
+  if (providers.length === 0 && status !== "unlinked" && status !== "failed") {
     return null
   }
 

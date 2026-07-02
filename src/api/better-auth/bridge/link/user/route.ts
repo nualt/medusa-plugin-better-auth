@@ -10,7 +10,12 @@ import {
   Modules,
 } from "@medusajs/framework/utils"
 import type { PostgresAdvisoryLockConnection } from "../../../../../lib/postgres-advisory-lock"
-import { ensureLinkedIdentity, getSessionUser } from "../helpers"
+import {
+  caseInsensitiveEmailFilter,
+  ensureLinkedIdentity,
+  getSessionUser,
+  pickActorByEmail,
+} from "../helpers"
 
 export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
   const baUser = await getSessionUser(req)
@@ -29,7 +34,12 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
   }
 
   const userService = req.scope.resolve(Modules.USER)
-  const [adminUser] = await userService.listUsers({ email: baUser.email })
+  const adminUsers = await userService.listUsers({
+    // Le type du filtre déclare `email: string`, mais le DAL Medusa
+    // accepte les opérateurs MikroORM ($ilike) — voir helpers.
+    email: caseInsensitiveEmailFilter(baUser.email) as unknown as string,
+  })
+  const adminUser = pickActorByEmail(adminUsers, baUser.email)
   if (!adminUser) {
     // Invariant : pas de création d'admin par OAuth.
     throw new MedusaError(

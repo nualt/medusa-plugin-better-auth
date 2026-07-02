@@ -89,22 +89,72 @@ release changelog.
   and error restoration. Manual Google OAuth remains part of the release
   checklist.
 
+### Provide an explicit production migration command
+
+- **Date:** 2026-07-02
+- **Status:** Implemented
+- **Problem:** Production deploys had no dedicated way to create the Better
+  Auth tables; the README recommended a temporary `autoMigrate: true` boot.
+- **Decision:** Ship a `medusa-plugin-better-auth migrate` bin. The launcher
+  registers ts-node when the invoking project provides one (mirroring
+  `@medusajs/cli`), the command hydrates the plugin-local `configManager`
+  through `configLoader`, runs the Better Auth migrations, and exits
+  explicitly so the dedicated pg pool cannot keep the process alive.
+- **Verification:** Unit coverage for argument handling, config-then-migrate
+  ordering, and failure propagation. Manual run against the development
+  database from `apps/backend` (initial and idempotent re-run).
+
+### Define the supported Better Auth version range
+
+- **Date:** 2026-07-02
+- **Status:** Implemented
+- **Problem:** The peer dependency accepted Better Auth `^1.3.0`, but the
+  plugin imports `better-auth/db/migration`, a subpath that only exists since
+  1.5.0. Installing 1.3.x or 1.4.x would fail at boot (with `autoMigrate`) or
+  when running the migration command.
+- **Decision:** Raise the peer dependency to `^1.5.0` (the technical floor
+  imposed by the migration import, confirmed against published package
+  exports) and align the dev dependency with 1.6.23, the version used for
+  local verification. Documented in the README.
+- **Verification:** Package exports inspected for 1.3.0–1.6.23; unit and HTTP
+  integration suites run against 1.6.23.
+
+### Match linking emails case-insensitively
+
+- **Date:** 2026-07-02
+- **Status:** Implemented
+- **Problem:** The bridge link routes matched customers and admin users with
+  an exact-case email filter, while Medusa stores emails as typed and OAuth
+  providers usually return them lowercased. An admin invited as
+  `Jane@Corp.com` could never link a Google identity reporting
+  `jane@corp.com`.
+- **Decision:** Query with a case-insensitive filter (`$ilike`, with ILIKE
+  wildcards escaped so the email stays a literal) and, when several accounts
+  differ only by casing, prefer the exact-case match.
+- **Verification:** Unit coverage for wildcard escaping and actor selection;
+  HTTP integration test linking an admin whose stored casing differs from the
+  provider email.
+
+### Distinguish technical failures from unlinked identities in the admin widget
+
+- **Date:** 2026-07-02
+- **Status:** Implemented
+- **Problem:** Any failure during the admin session exchange (including 500s
+  and network errors) showed the "no admin account is linked" invitation
+  message, sending operators down the wrong path.
+- **Decision:** Map only 401/403 responses to the unlinked message; all other
+  failures show the generic sign-in failure notice. The failure notice also
+  renders when the provider list is empty so the error is never hidden.
+- **Verification:** Admin extension production build. Manual admin OAuth
+  error-path review remains in the release checklist.
+
 ## Planned
 
 No additional work has been accepted yet.
 
 ## Candidates
 
-### P2 — Provide an explicit production migration command
-
-Document and expose a deploy-safe migration workflow instead of recommending a
-temporary `autoMigrate: true` production boot.
-
-### P2 — Define the supported Better Auth version range
-
-The peer dependency currently accepts Better Auth `^1.3.0`, while local
-verification uses 1.6.23. Add a compatibility test matrix or raise the minimum
-supported version to the oldest version covered by CI.
+None currently.
 
 ## Updating this tracker
 
