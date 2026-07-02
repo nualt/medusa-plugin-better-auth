@@ -4,7 +4,7 @@ import {
   ADMIN_OAUTH_CALLBACK_URL,
   isAdminOAuthCallback,
 } from "../../lib/admin-oauth"
-import { ProviderIcon } from "./provider-icons"
+import { getProviderDisplay, ProviderIcon } from "./provider-icons"
 
 const BASE = "/better-auth"
 
@@ -52,15 +52,6 @@ async function completeAdminLogin(): Promise<
   }
   window.location.href = "/app"
   return "done"
-}
-
-const PROVIDER_LABELS: Record<string, string> = {
-  google: "Google",
-  github: "GitHub",
-  discord: "Discord",
-  apple: "Apple",
-  facebook: "Facebook",
-  microsoft: "Microsoft",
 }
 
 const BetterAuthLoginWidget = () => {
@@ -143,7 +134,7 @@ const BetterAuthLoginWidget = () => {
           className="bg-ui-bg-base hover:bg-ui-bg-base-hover border-ui-border-strong text-ui-fg-base shadow-buttons-neutral flex w-full items-center justify-center gap-x-2.5 rounded-md border px-3 py-2.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
         >
           <ProviderIcon provider={provider} />
-          <span>Continue with {PROVIDER_LABELS[provider] ?? provider}</span>
+          <span>Continue with {getProviderDisplay(provider).label}</span>
         </button>
       ))}
       <div className="text-ui-fg-muted flex items-center gap-x-2 text-xs">
