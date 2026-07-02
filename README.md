@@ -122,6 +122,9 @@ See a complete implementation in
 [nualt-shop](https://github.com/thomassarazin/nualt-shop)
 (`apps/storefront/src/lib/better-auth/`).
 
+Ongoing hardening work and proposed follow-ups are recorded in the
+[development tracker](docs/DEVELOPMENT-TRACKER.md).
+
 ## Admin dashboard
 
 The plugin ships a `login.before` widget: social buttons appear above the

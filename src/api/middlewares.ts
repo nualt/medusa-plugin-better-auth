@@ -13,14 +13,16 @@ import {
   runBetterAuthMigrations,
   type BetterAuthInstance,
 } from "../lib/better-auth"
+import { withFullRequestUrl } from "../lib/node-request-url"
 
 const BRIDGE_PREFIX = `${BASE_PATH}/bridge`
 
 // toNodeHandler is ESM-only (better-auth/node exports only .mjs).
 // We store the handler inside the ready promise to avoid a static import
 // that would break the CJS build produced by medusa plugin:build.
-let nodeHandler: ((req: MedusaRequest, res: MedusaResponse) => void) | null =
-  null
+let nodeHandler:
+  | ((req: MedusaRequest, res: MedusaResponse) => void | Promise<void>)
+  | null = null
 let corsMiddlewareHandler: ReturnType<typeof cors> | null = null
 
 // Attempt fail-fast at import time: when configManager is already populated
@@ -100,7 +102,7 @@ const ready: Promise<BetterAuthInstance> = (async () => {
   nodeHandler = toNodeHandler(auth) as (
     req: MedusaRequest,
     res: MedusaResponse
-  ) => void
+  ) => void | Promise<void>
   return auth
 })()
 
@@ -140,10 +142,7 @@ async function betterAuthRouter(
   }
   try {
     await ready
-    // app.use() peut retirer le préfixe monté de req.url ; Better Auth
-    // route sur le chemin complet.
-    req.url = req.originalUrl
-    return nodeHandler!(req, res)
+    return await withFullRequestUrl(req, () => nodeHandler!(req, res))
   } catch (error) {
     return next(error)
   }
