@@ -148,6 +148,26 @@ release changelog.
 - **Verification:** Admin extension production build. Manual admin OAuth
   error-path review remains in the release checklist.
 
+### Document production hardening requirements
+
+- **Date:** 2026-07-02
+- **Status:** Implemented
+- **Problem:** Nothing told operators that Better Auth's default rate-limit
+  storage is per-instance, that cross-subdomain cookies need explicit
+  configuration, that the plugin adds a second pg pool per instance, or that
+  `ba_session` grows unbounded. The Medusa core exchange routes also sit
+  outside Better Auth's limiter.
+- **Decision:** Add a "Production checklist" section to the README with
+  concrete `betterAuth` passthrough configuration (shared rate-limit storage,
+  strict rules on sign-in/sign-up, proxy IP headers, cross-subdomain cookies)
+  plus pool sizing, session purge, proxy-level rate limiting of `/auth/*`,
+  and the deploy-time migration command. No code changes: everything is
+  reachable through existing passthrough options.
+- **Verification:** Rate-limit and cookie defaults checked against current
+  Better Auth documentation. Out-of-the-box validation on a fresh
+  `create-medusa-app` template (npm tarball install, migrate CLI, boot,
+  full customer and admin flows, admin widget render).
+
 ## Planned
 
 No additional work has been accepted yet.

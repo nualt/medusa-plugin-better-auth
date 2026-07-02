@@ -159,6 +159,58 @@ instead of a hard boot refusal. Trusted origins are derived from your
 Medusa `authCors`/`storeCors`/`adminCors` and merged with any
 `betterAuth.trustedOrigins` you provide.
 
+## Production checklist
+
+The plugin stays out of the hot path — Better Auth is only exercised at
+sign-in, after which clients hold native Medusa tokens — but the
+following must be configured before going live. Everything below is
+standard Better Auth configuration passed through the `betterAuth`
+option.
+
+**Rate limiting across instances.** Better Auth enables its rate limiter
+in production, but the default storage is in-memory, i.e. per instance.
+Behind a load balancer, switch to shared storage and tighten the
+sensitive endpoints:
+
+```ts
+betterAuth: {
+  rateLimit: {
+    storage: "database", // or "secondary-storage" with Redis
+    customRules: {
+      "/sign-in/email": { window: 10, max: 3 },
+      "/sign-up/email": { window: 60, max: 5 },
+    },
+  },
+  // Behind a proxy/CDN, tell Better Auth where the client IP lives:
+  advanced: {
+    ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] },
+  },
+}
+```
+
+Also rate-limit `/auth/*` at your reverse proxy: the Medusa core
+exchange routes (`/auth/customer/better-auth`, `/auth/user/better-auth`)
+are not covered by Better Auth's limiter and each call costs a session
+lookup.
+
+**Cross-subdomain cookies.** With a storefront on `shop.example.com`
+and the API on `api.example.com`, configure
+`advanced.crossSubDomainCookies = { enabled: true, domain: "example.com" }`
+(and keep `useSecureCookies` on). This is the most common source of
+"works locally, fails in production" reports.
+
+**Postgres connections.** The plugin runs its own `pg` pool (default max
+10 per instance) next to Medusa's. Size your database or pooler
+(pgbouncer) accordingly, or lower the Better Auth pool via
+`betterAuth.database` advanced options.
+
+**Session table growth.** Expired `ba_session` rows are not purged
+eagerly; schedule a periodic cleanup
+(`delete from ba_session where "expiresAt" < now()`).
+
+**Migrations.** Keep `autoMigrate` off in production and run
+`npx medusa-plugin-better-auth migrate` during deploys.
+
 ## License
 
 MIT
