@@ -236,6 +236,15 @@ Medusa `authCors`/`storeCors`/`adminCors` and merged with any
 
 ## Customer email normalization and guest orders
 
+> **Heads up — this touches core Medusa routes.** With
+> `normalizeCustomerEmails` enabled (the default), the plugin attaches
+> middlewares to `POST /auth/customer/emailpass`,
+> `POST /auth/customer/emailpass/register`, `POST /store/customers` and the
+> cart routes to canonicalize emails. This is the only place the plugin
+> reaches outside `/better-auth/*`, and it exists because case-duplicate
+> accounts are a real-world footgun. Set `normalizeCustomerEmails: false`
+> to keep Medusa's native case-sensitive behavior untouched.
+
 With `normalizeCustomerEmails` enabled, the plugin applies one canonical email
 form to native Medusa customer registration, customer creation, and guest cart
 writes. Existing mixed-case `emailpass` identities remain usable: login first
