@@ -17,7 +17,7 @@
     "bin"
   ],
   "bin": {
-    "medusa-plugin-better-auth": "./bin/medusa-plugin-better-auth.js"
+    "medusa-plugin-better-auth": "bin/medusa-plugin-better-auth.js"
   },
   "keywords": [
     "medusa",
