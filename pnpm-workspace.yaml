@@ -1,0 +1,8 @@
+# Single-package repo; this file exists for pnpm settings only.
+# pnpm >= 11 syntax (allowBuilds replaced onlyBuiltDependencies).
+allowBuilds:
+  "@medusajs/telemetry": true
+  "@swc/core": true
+  esbuild: true
+  protobufjs: true
+  msgpackr-extract: true

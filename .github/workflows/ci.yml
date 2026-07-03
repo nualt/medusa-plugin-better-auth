@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:unit
+      - run: pnpm build
+      # The tarball must contain the compiled output and nothing else —
+      # a forgotten build or a leaked src/ would ship a broken package.
+      - name: Verify publishable tarball
+        run: |
+          pnpm pack
+          tar -tzf medusa-plugin-better-auth-*.tgz | grep -q '.medusa/server/src/lib/better-auth.js'
+          ! tar -tzf medusa-plugin-better-auth-*.tgz | grep -E '^package/(src|docs)/'
