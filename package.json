@@ -3,6 +3,15 @@
   "version": "0.1.0",
   "description": "Better Auth as the authentication engine for Medusa v2 — social OAuth, magic links, passkeys and 2FA for customers and admin users.",
   "license": "MIT",
+  "author": "Thomas Sarazin (https://github.com/nualt)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nualt/medusa-plugin-better-auth.git"
+  },
+  "homepage": "https://github.com/nualt/medusa-plugin-better-auth#readme",
+  "bugs": {
+    "url": "https://github.com/nualt/medusa-plugin-better-auth/issues"
+  },
   "files": [
     ".medusa/server",
     "bin"
