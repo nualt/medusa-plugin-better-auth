@@ -264,9 +264,11 @@ Secret resolution: `betterAuth.secret`, else `BETTER_AUTH_SECRET`. The
 server refuses to boot without one. Caveat: in setups where the config
 module isn't loaded at plugin import time (some pnpm monorepos), the
 failure surfaces as a logged startup error and errors on `/better-auth/*`
-instead of a hard boot refusal — this is scoped to `/better-auth/*` only:
-email normalization and native Medusa customer/cart/emailpass flows keep
-working regardless of Better Auth init state. Trusted origins are derived from your
+instead of a hard boot refusal. A missing secret breaks email normalization
+too (it needs the resolved options); failures during Better Auth's own
+initialization *after* options resolved (e.g. the npm `jose` issue above)
+are scoped to `/better-auth/*` only — email normalization and native Medusa
+customer/cart/emailpass flows keep working. Trusted origins are derived from your
 Medusa `authCors`/`storeCors`/`adminCors` and merged with any
 `betterAuth.trustedOrigins` you provide.
 
