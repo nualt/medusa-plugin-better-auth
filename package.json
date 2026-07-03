@@ -25,7 +25,9 @@
     "medusa-v2",
     "better-auth",
     "authentication",
-    "oauth"
+    "oauth",
+    "medusa-plugin-integration",
+    "medusa-plugin-integration-auth"
   ],
   "exports": {
     "./package.json": "./package.json",
