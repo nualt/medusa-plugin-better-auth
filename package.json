@@ -1,6 +1,6 @@
 {
   "name": "@nualt/medusa-plugin-better-auth",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Better Auth as the authentication engine for Medusa v2 — social OAuth, magic links, passkeys and 2FA for customers and admin users.",
   "license": "MIT",
   "author": "Thomas Sarazin (https://github.com/nualt)",
@@ -27,7 +27,8 @@
     "authentication",
     "oauth",
     "medusa-plugin-integration",
-    "medusa-plugin-integration-auth"
+    "medusa-plugin-integration-auth",
+    "medusa-plugin-auth"
   ],
   "exports": {
     "./package.json": "./package.json",
