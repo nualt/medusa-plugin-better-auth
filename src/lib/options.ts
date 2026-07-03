@@ -1,13 +1,18 @@
 import type { ConfigModule } from "@medusajs/framework/types"
 import type { BetterAuthPluginOptions, ResolvedPluginOptions } from "./types"
 
-export const PLUGIN_NAME = "medusa-plugin-better-auth"
+export const PLUGIN_NAME = "@nualt/medusa-plugin-better-auth"
+
+// Unscoped directory name: local-path resolves (monorepos, tarball installs)
+// end with the folder name, which carries no npm scope.
+const PLUGIN_DIR_NAME = "medusa-plugin-better-auth"
 
 function isPluginEntry(resolve: string): boolean {
   return (
     resolve === PLUGIN_NAME ||
-    resolve.endsWith(`/${PLUGIN_NAME}`) ||
-    resolve.endsWith(`\\${PLUGIN_NAME}`)
+    resolve === PLUGIN_DIR_NAME ||
+    resolve.endsWith(`/${PLUGIN_DIR_NAME}`) ||
+    resolve.endsWith(`\\${PLUGIN_DIR_NAME}`)
   )
 }
 

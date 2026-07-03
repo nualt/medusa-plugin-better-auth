@@ -1,4 +1,4 @@
-# medusa-plugin-better-auth
+# @nualt/medusa-plugin-better-auth
 
 [Better Auth](https://better-auth.com) as the authentication engine for
 [Medusa v2](https://medusajs.com) — social OAuth, email & password, magic
@@ -22,7 +22,7 @@ verified the email.
 ## Installation
 
 ```bash
-pnpm add medusa-plugin-better-auth better-auth
+pnpm add @nualt/medusa-plugin-better-auth better-auth
 ```
 
 1. Register the plugin and the auth provider in `medusa-config.ts`:
@@ -32,7 +32,7 @@ module.exports = defineConfig({
   // …
   plugins: [
     {
-      resolve: "medusa-plugin-better-auth",
+      resolve: "@nualt/medusa-plugin-better-auth",
       options: {
         betterAuth: {
           baseURL: process.env.BETTER_AUTH_URL, // public URL of this server
@@ -58,7 +58,7 @@ module.exports = defineConfig({
         providers: [
           { resolve: "@medusajs/medusa/auth-emailpass", id: "emailpass" },
           {
-            resolve: "medusa-plugin-better-auth/providers/better-auth",
+            resolve: "@nualt/medusa-plugin-better-auth/providers/better-auth",
             id: "better-auth",
           },
         ],
@@ -102,7 +102,7 @@ strict peer resolution need two extra steps (verified on the official
    template's React 19. Install with:
 
    ```bash
-   npm install medusa-plugin-better-auth better-auth --legacy-peer-deps
+   npm install @nualt/medusa-plugin-better-auth better-auth --legacy-peer-deps
    ```
 
 2. **`jose` version clash at runtime** — if an older `jose` (v4) ends up
@@ -169,7 +169,7 @@ lazily instead; the plugin resolves them with a dynamic import when the
 Better Auth instance is built:
 
 ```ts
-import { lazyBetterAuthPlugin } from "medusa-plugin-better-auth/lib/lazy-plugins"
+import { lazyBetterAuthPlugin } from "@nualt/medusa-plugin-better-auth/lib/lazy-plugins"
 
 betterAuth: {
   plugins: [

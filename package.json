@@ -1,5 +1,5 @@
 {
-  "name": "medusa-plugin-better-auth",
+  "name": "@nualt/medusa-plugin-better-auth",
   "version": "0.1.0",
   "description": "Better Auth as the authentication engine for Medusa v2 — social OAuth, magic links, passkeys and 2FA for customers and admin users.",
   "license": "MIT",
@@ -55,7 +55,8 @@
     "@medusajs/cli": "^2.15.0",
     "@medusajs/framework": "^2.15.0",
     "better-auth": "^1.5.0",
-    "react": "^18 || ^19"
+    "react": "^18 || ^19",
+    "@medusajs/medusa": "^2.15.0"
   },
   "devDependencies": {
     "@medusajs/admin-sdk": "2.15.5",
@@ -80,5 +81,8 @@
   },
   "engines": {
     "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
