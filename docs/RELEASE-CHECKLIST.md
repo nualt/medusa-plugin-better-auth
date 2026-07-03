@@ -4,6 +4,10 @@ Avant chaque publication npm :
 
 - [ ] `pnpm --filter medusa-plugin-better-auth test:unit` — vert
 - [ ] `pnpm --filter @dtc/backend test:integration:http` — vert
+- [ ] Audit pré-déploiement des doublons d'email ne différant que par la
+      casse (`customer` avec `has_account=true` et `provider_identity`
+      emailpass) — les comptes ambigus recevront désormais un 409 à la
+      liaison et au login natif tant qu'ils ne sont pas dédupliqués.
 - [ ] E2E manuel sur nualt-shop en local :
   - [ ] Storefront : magic link (console en dev) → session active
   - [ ] Storefront : boutons providers avec logos (Google + un provider fallback factice)

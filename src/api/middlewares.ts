@@ -54,11 +54,12 @@ if (configManager.config?.projectConfig?.databaseUrl) {
 // runner's DB URL override, corrupting the singleton. We therefore skip the
 // call when the config is already loaded.
 //
-// This is an async IIFE so that the resolved options and the Better Auth
-// instance are both ready before the first request is processed.
-// Any bad configuration (missing secret, unknown plugin) surfaces here and
-// propagates to the first request via betterAuthRouter's try/catch.
-const ready: Promise<BetterAuthInstance> = (async () => {
+// Hydrate the plugin-local configManager singleton (if needed) and resolve
+// plugin options. Extracted so both `optionsReady` (used by the core-route
+// normalization middlewares, which only ever need getPluginOptions()) and
+// `ready` (the full Better Auth init, used by /better-auth/*) share the same
+// config-loading path instead of duplicating it.
+async function loadPluginOptions() {
   // Only load the config if configManager hasn't been populated yet.
   // In tests (shared process) and in production (Medusa loads config before
   // plugins), the configManager is already initialised.
@@ -71,7 +72,24 @@ const ready: Promise<BetterAuthInstance> = (async () => {
 
   // Résolu au chargement du fichier (boot Medusa) : une config invalide
   // fait échouer le démarrage, pas la première requête.
-  const options = getPluginOptions()
+  return getPluginOptions()
+}
+
+// Options-only readiness gate for the core-route normalization middlewares
+// (emailpass, /store/customers, /store/carts). These never touch the Better
+// Auth instance itself — they only resolve Medusa modules from req.scope —
+// so they must not be coupled to the full `ready` init below. If Better Auth
+// fails to initialise (e.g. the documented jose@4 npm hoisting issue), guest
+// checkout and native customer/cart writes must keep working.
+const optionsReady: Promise<ReturnType<typeof getPluginOptions>> =
+  loadPluginOptions()
+
+// This is an async IIFE so that the resolved options and the Better Auth
+// instance are both ready before the first request is processed.
+// Any bad configuration (missing secret, unknown plugin) surfaces here and
+// propagates to the first request via betterAuthRouter's try/catch.
+const ready: Promise<BetterAuthInstance> = (async () => {
+  const options = await optionsReady
 
   // /better-auth n'est pas un namespace connu de Medusa (/store, /admin,
   // /auth) : aucun CORS n'y est appliqué par le core. On le gère ici pour
@@ -167,13 +185,18 @@ async function betterAuthRouter(
   }
 }
 
-async function waitForPluginReady(
+// Core-route gate: awaits only `optionsReady`, never the full Better Auth
+// `ready` init. This decouples cart/customer/emailpass normalization from
+// Better Auth init failures (e.g. jose@4 npm hoisting) — those routes only
+// resolve Medusa modules from req.scope and never touch the Better Auth
+// instance.
+async function waitForPluginOptions(
   _req: MedusaRequest,
   _res: MedusaResponse,
   next: MedusaNextFunction
 ) {
   try {
-    await ready
+    await optionsReady
     return next()
   } catch (error) {
     return next(error)
@@ -185,27 +208,30 @@ export default defineMiddlewares({
     {
       matcher: "/auth/customer/emailpass/register",
       methods: ["POST"],
-      middlewares: [waitForPluginReady, normalizeCustomerEmailPassRegistration],
+      middlewares: [
+        waitForPluginOptions,
+        normalizeCustomerEmailPassRegistration,
+      ],
     },
     {
       matcher: "/auth/customer/emailpass",
       methods: ["POST"],
-      middlewares: [waitForPluginReady, normalizeCustomerEmailPassLogin],
+      middlewares: [waitForPluginOptions, normalizeCustomerEmailPassLogin],
     },
     {
       matcher: "/store/customers",
       methods: ["POST"],
-      middlewares: [waitForPluginReady, normalizeCustomerCreationEmail],
+      middlewares: [waitForPluginOptions, normalizeCustomerCreationEmail],
     },
     {
       matcher: "/store/carts",
       methods: ["POST"],
-      middlewares: [waitForPluginReady, normalizeCartEmail],
+      middlewares: [waitForPluginOptions, normalizeCartEmail],
     },
     {
       matcher: "/store/carts/:id",
       methods: ["POST"],
-      middlewares: [waitForPluginReady, normalizeCartEmail],
+      middlewares: [waitForPluginOptions, normalizeCartEmail],
     },
     {
       matcher: `${BASE_PATH}/*`,
