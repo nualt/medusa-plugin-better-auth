@@ -91,6 +91,40 @@ running it on every deploy is safe.
 The plugin requires Better Auth `>= 1.5.0` (the migration API moved to
 `better-auth/db/migration` in 1.5.0); it is verified against 1.6.x.
 
+## Installing with npm
+
+pnpm and yarn install this plugin without friction. npm's flat hoisting and
+strict peer resolution need two extra steps (verified on the official
+`create-medusa-app` monorepo template, Medusa 2.17):
+
+1. **Peer conflict at install** — better-auth ships an optional peer chain
+   (`@lynx-js/react`) that pins `@types/react@^18`, conflicting with the
+   template's React 19. Install with:
+
+   ```bash
+   npm install medusa-plugin-better-auth better-auth --legacy-peer-deps
+   ```
+
+2. **`jose` version clash at runtime** — if an older `jose` (v4) ends up
+   hoisted at your workspace root, the Better Auth OAuth module crashes with
+   `The requested module 'jose' does not provide an export named 'customFetch'`
+   — and only once a social provider is configured, which makes it look like
+   a provider bug. Fix: delete `node_modules` and `package-lock.json`, then
+   reinstall (npm does not restructure a locked tree). Belt and braces, add
+   to your **root** `package.json`:
+
+   ```json
+   "overrides": {
+     "better-auth": { "jose": "^6.1.0" },
+     "@better-auth/core": { "jose": "^6.1.0" }
+   }
+   ```
+
+The plugin detects the `jose` crash at boot and prints this exact remedy.
+In an npm workspaces monorepo, install the plugin from the workspace root
+(hoisted): Medusa's module resolver looks the auth provider up from the root
+`node_modules`.
+
 ## Zero-config providers
 
 Set a pair of environment variables and the provider is live — button and

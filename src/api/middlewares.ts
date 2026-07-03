@@ -119,6 +119,19 @@ ready.catch((err) => {
     "[medusa-plugin-better-auth] Initialisation failed — all /better-auth/* requests will return errors. Root cause:",
     err
   )
+  // npm flat-hoisting can leave an old `jose` at the workspace root while
+  // @better-auth/core needs ^6 — the crash only appears once a social
+  // provider is configured (the OAuth module is loaded lazily). Print the
+  // known remedy instead of leaving operators with a bare SyntaxError.
+  const message = err instanceof Error ? err.message : String(err)
+  if (message.includes("jose") && message.includes("customFetch")) {
+    console.error(
+      `[medusa-plugin-better-auth] This is a known npm dependency-tree issue: an outdated "jose" package is hoisted at your workspace root while Better Auth requires jose@^6.
+Fix: regenerate your lockfile — delete node_modules and package-lock.json, then reinstall (npm install --legacy-peer-deps). As a belt-and-braces measure, add to your root package.json:
+  "overrides": { "better-auth": { "jose": "^6.1.0" }, "@better-auth/core": { "jose": "^6.1.0" } }
+pnpm and yarn are not affected. See the plugin README, section "Installing with npm".`
+    )
+  }
 })
 
 async function corsMiddleware(

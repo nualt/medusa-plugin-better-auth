@@ -283,7 +283,28 @@ release changelog.
 
 ## Candidates
 
-None currently.
+### `doctor` command for npm installs
+
+- **Problem:** npm's flat hoisting produced two real-world failures during
+  the vanilla-template portability run (2026-07-03): a peer-resolution
+  conflict at install time and a hoisted `jose@4` crashing the OAuth module
+  at runtime. Both have documented remedies (README "Installing with npm")
+  and the boot log now prints the `jose` fix, but the experience is still
+  not zero-touch for npm users.
+- **Possible scope:** `npx medusa-plugin-better-auth doctor` — check the
+  `jose` version resolvable from `@better-auth/core`, provider env pairs,
+  and `ba_*` tables; optionally write the `overrides` block into the root
+  `package.json` (JSON is safe to patch programmatically, unlike
+  `medusa-config.ts`).
+
+### Upstream better-auth dependency report
+
+- **Problem:** the root causes of both npm failures live upstream: the
+  optional `@lynx-js/react` peer pins `@types/react@^18`, and
+  `@better-auth/core` requires `jose@^6` while common ecosystem packages
+  still hoist v4.
+- **Possible scope:** open an issue on better-auth with the two
+  reproductions from the portability report.
 
 ## Updating this tracker
 
