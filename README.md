@@ -261,12 +261,6 @@ email, and point `callbackURL` at your storefront page with the
 
 The standard session exchange handles the rest.
 
-A working implementation is available in
-[nualt-shop](https://github.com/thomassarazin/nualt-shop):
-
-- `apps/backend/medusa-config.ts`
-- `apps/storefront/src/modules/account/components/better-auth-login/`
-
 ## Endpoints
 
 | Endpoint | Purpose |
@@ -319,13 +313,6 @@ server runtime.
 The storefront origin must also be included in Medusa's `AUTH_CORS` environment
 variable, because the exchange routes live under `/auth/*` and are gated by that
 policy.
-
-A complete implementation is available in
-[nualt-shop](https://github.com/thomassarazin/nualt-shop):
-
-```txt
-apps/storefront/src/lib/better-auth/
-```
 
 Ongoing hardening work and proposed follow-ups are recorded in the
 [development tracker](docs/DEVELOPMENT-TRACKER.md).
